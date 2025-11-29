@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"os"
 
 	"github.com/fekete965/boot.dev-blog-aggregator/internal/config"
 )
@@ -55,14 +56,38 @@ func handleLogin(s *state, cmd command) error {
 func main() {
 	configFile, err := config.Read()
 	if err != nil {
-		log.Fatalf("Failed to read config file: %v", err)
+		log.Fatalf("failed to read config file: %v", err)
 	}
-	
-	configFile.SetUser("Bence")
+
+	// Initialize the application state
+	appState := &state {
+		Config: configFile,
+	}
+
+	// Initialize the command handlers
+	commands := &commands {
+		handlers: make(map[string]func(s *state, cmd command) error),
+	}
+
+	// Register the command handlers
+	commands.register("login", handleLogin)
+
+	if len(os.Args) < 2 {
+		log.Fatalf("you did not provide any arguments. Usage of gator is: gator <command> <args>")
+	}
+
+	newCommand := command {
+		name: os.Args[1],
+		args: os.Args[2:],
+	}
+
+	if err := commands.run(appState, newCommand); err != nil {
+		log.Fatalf("failed to run command: %v: ", err)
+	}
 
 	configFile, err = config.Read()
 	if err != nil {
-		log.Fatalf("Failed to read config file: %v", err)
+		log.Fatalf("failed to read config file: %v", err)
 	}
 
 	fmt.Printf("Config: %+v\n", configFile)
