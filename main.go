@@ -37,6 +37,21 @@ func (c *commands) register(name string, fn func(s *state, cmd command) error) e
 	return nil
 }
 
+func handleLogin(s *state, cmd command) error {
+	if len(cmd.args) == 0 {
+		return fmt.Errorf("the login command requires a username. Usage: gator login <username>")
+	}
+
+	username := cmd.args[0]
+
+	if err := s.Config.SetUser(username); err != nil {
+		return fmt.Errorf("an error occurred during login: %w", err)
+	}
+
+	fmt.Printf("Current user has been set to: %v\n", username)
+	return nil
+}
+
 func main() {
 	configFile, err := config.Read()
 	if err != nil {
