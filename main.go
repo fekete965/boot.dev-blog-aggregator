@@ -6,9 +6,12 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	"github.com/fekete965/boot.dev-blog-aggregator/internal/config"
 	"github.com/fekete965/boot.dev-blog-aggregator/internal/database"
+	"github.com/google/uuid"
+
 	_ "github.com/lib/pq"
 )
 
@@ -62,6 +65,37 @@ func handleLogin(s *state, cmd command) error {
 	fmt.Printf("Current user has been set to: %v\n", existingUser.Name)
 	return nil
 }
+
+func handleRegister(s *state, cmd command) error {
+	if len(cmd.args) == 0 {
+		return fmt.Errorf("the register command required a username. Usage: gator register <username>")	
+	}
+
+	username := cmd.args[0]
+
+	createdUser, err := s.database.CreateUser(context.Background(), database.CreateUserParams{
+		ID: uuid.New(),
+		Name: username,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	})
+
+	if err != nil {
+		log.Fatalf("failed to register user: %v", err)
+	}
+
+	if err := s.config.SetUser(createdUser.Name); err != nil {
+		return fmt.Errorf("an error occurred during registration: %v", err)
+	}
+
+	fmt.Printf("User has been registered: %v\n", username)
+	fmt.Printf("User ID: %v\n", createdUser.ID)
+	fmt.Printf("User Name: %v\n", createdUser.Name)
+	fmt.Printf("User Created At: %v\n", createdUser.CreatedAt)
+	fmt.Printf("User Updated At: %v\n", createdUser.UpdatedAt)
+
+	return nil
+}
 	return nil
 }
 
@@ -91,6 +125,7 @@ func main() {
 
 	// Register the command handlers
 	commands.register("login", handleLogin)
+	commands.register("register", handleRegister)
 
 	if len(os.Args) < 2 {
 		log.Fatalf("you did not provide any arguments. Usage of gator is: gator <command> <args>")
