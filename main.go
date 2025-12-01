@@ -149,11 +149,4 @@ func main() {
 	if err := commands.run(appState, newCommand); err != nil {
 		log.Fatalf("failed to run command: %v: ", err)
 	}
-
-	configFile, err = config.Read()
-	if err != nil {
-		log.Fatalf("failed to read config file: %v", err)
-	}
-
-	fmt.Printf("Config: %+v\n", configFile)
 }
