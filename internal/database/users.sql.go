@@ -41,3 +41,19 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 	)
 	return i, err
 }
+
+const findUserByeName = `-- name: FindUserByeName :one
+SELECT id, name, created_at, updated_at FROM users WHERE name = $1 ORDER BY created_at DESC LIMIT 1
+`
+
+func (q *Queries) FindUserByeName(ctx context.Context, name string) (User, error) {
+	row := q.db.QueryRowContext(ctx, findUserByeName, name)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
