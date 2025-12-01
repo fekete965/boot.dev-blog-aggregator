@@ -96,6 +96,15 @@ func handleRegister(s *state, cmd command) error {
 
 	return nil
 }
+
+func handleReset(s *state, cmd command) error {
+	err := s.database.DeleteAllUsers(context.Background())
+	if err != nil {
+		return fmt.Errorf("failed to reset database: %v", err)
+	}
+
+	fmt.Println("Database has been reset")
+
 	return nil
 }
 
@@ -126,6 +135,7 @@ func main() {
 	// Register the command handlers
 	commands.register("login", handleLogin)
 	commands.register("register", handleRegister)
+	commands.register("reset", handleReset)
 
 	if len(os.Args) < 2 {
 		log.Fatalf("you did not provide any arguments. Usage of gator is: gator <command> <args>")
