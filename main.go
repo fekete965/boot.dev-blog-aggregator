@@ -1,15 +1,20 @@
 package main
 
 import (
+	"context"
+	"database/sql"
 	"fmt"
 	"log"
 	"os"
 
 	"github.com/fekete965/boot.dev-blog-aggregator/internal/config"
+	"github.com/fekete965/boot.dev-blog-aggregator/internal/database"
+	_ "github.com/lib/pq"
 )
 
 type state struct {
-	Config *config.Config
+	config *config.Config
+	database *database.Queries 
 }
 
 type command struct {
@@ -45,11 +50,18 @@ func handleLogin(s *state, cmd command) error {
 
 	username := cmd.args[0]
 
-	if err := s.Config.SetUser(username); err != nil {
-		return fmt.Errorf("an error occurred during login: %w", err)
+	existingUser, err := s.database.FindUserByeName(context.Background(), username)
+	if err != nil {
+		log.Fatalf("cannot find user: %v", err)
 	}
 
-	fmt.Printf("Current user has been set to: %v\n", username)
+	if err := s.config.SetUser(existingUser.Name); err != nil {
+		return fmt.Errorf("an error occurred during login: %v", err)
+	}
+
+	fmt.Printf("Current user has been set to: %v\n", existingUser.Name)
+	return nil
+}
 	return nil
 }
 
@@ -59,9 +71,17 @@ func main() {
 		log.Fatalf("failed to read config file: %v", err)
 	}
 
+	// Create the database connection
+	db, err := sql.Open("postgres", configFile.DBUrl)
+	if err != nil {
+		log.Fatalf("failed to create database connection: %v", err)
+	}
+	dbQueries := database.New(db)
+
 	// Initialize the application state
 	appState := &state {
-		Config: configFile,
+		database: dbQueries, 
+		config: configFile,
 	}
 
 	// Initialize the command handlers
