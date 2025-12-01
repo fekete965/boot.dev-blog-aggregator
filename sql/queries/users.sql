@@ -6,3 +6,5 @@ RETURNING *;
 -- name: FindUserByeName :one
 SELECT * FROM users WHERE name = $1 ORDER BY created_at DESC LIMIT 1;
 
+-- name: DeleteAllUsers :exec
+DELETE FROM users;
