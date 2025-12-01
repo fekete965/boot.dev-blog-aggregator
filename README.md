@@ -1,43 +1,70 @@
 # Boot.dev Blog Aggregator
 
-A Go-based blog aggregator CLI application.
+A modern Go-based blog aggregator CLI application built with type-safe database queries.
 
-## Database Management
+## 🚀 Features
+
+- **Type-safe database queries** using SQLC
+- **Database migrations** managed with Goose
+- **User management** with registration, login, and listing
+- **CLI-first** design for easy automation
+
+## 📋 Prerequisites
+
+- **Go** 1.23.2 or later
+- **PostgreSQL** 13+ (for `gen_random_uuid()` support)
+- **Goose** CLI tool for migrations
+- **SQLC** CLI tool for code generation
+
+### Installing Tools
+
+```bash
+# Install Goose
+go install github.com/pressly/goose/v3/cmd/goose@latest
+
+# Install SQLC
+go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest
+```
+
+## 🗄️ Database Management
 
 This project uses **Goose** for database migrations and **SQLC** for type-safe SQL code generation.
 
 ### Goose Migrations
 
-**Goose** is used to manage database schema migrations. All migration files are located in the `sql/schema/` directory.
+**Goose** manages database schema migrations. All migration files are located in `sql/schema/`.
 
 #### Running Migrations
 
-To run migrations, use the goose CLI tool:
-
 ```bash
 # Run all pending migrations
-goose -dir sql/schema postgres "your-database-url" up
+goose -dir sql/schema postgres "$DB_URL" up
 
 # Rollback the last migration
-goose -dir sql/schema postgres "your-database-url" down
+goose -dir sql/schema postgres "$DB_URL" down
 
 # Check migration status
-goose -dir sql/schema postgres "your-database-url" status
+goose -dir sql/schema postgres "$DB_URL" status
+
+# Create a new migration
+goose -dir sql/schema postgres "$DB_URL" create migration_name sql
 ```
 
-#### Creating New Migrations
+#### Migration File Structure
 
-Migration files follow the naming pattern `XXX_description.sql` (e.g., `001_users.sql`). Each migration file should include:
+Migration files follow the pattern `XXX_description.sql` (e.g., `001_users.sql`). Each file includes:
 
-- `-- +goose up` comment followed by the migration SQL
-- `-- +goose down` comment followed by the rollback SQL
+- `-- +goose up` - Migration SQL
+- `-- +goose down` - Rollback SQL
 
-Example:
+**Example:**
 ```sql
 -- +goose up
 CREATE TABLE users (
-  id UUID PRIMARY KEY NOT NULL,
-  name VARCHAR(255) NOT NULL
+  id UUID PRIMARY KEY NOT NULL DEFAULT gen_random_uuid(),
+  name VARCHAR(255) NOT NULL UNIQUE,
+  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 -- +goose down
@@ -46,41 +73,59 @@ DROP TABLE users;
 
 ### SQLC Code Generation
 
-**SQLC** is used to generate type-safe Go code from SQL queries. This ensures compile-time safety and eliminates the need for manual struct mapping.
+**SQLC** generates type-safe Go code from SQL queries, providing compile-time safety and eliminating manual struct mapping.
 
-#### Generating Code
+#### Workflow
 
-After writing SQL queries, run SQLC to generate the corresponding Go code:
-
-```bash
-sqlc generate
-```
+1. Write SQL queries in `sql/queries/` directory
+2. Run SQLC to generate Go code:
+   ```bash
+   sqlc generate
+   ```
+3. Generated code appears in `internal/database/`
 
 #### SQLC Configuration
 
-SQLC reads from a configuration file (typically `sqlc.yaml`) that defines:
-- Database type (PostgreSQL, MySQL, etc.)
-- SQL query locations
-- Generated code output paths
-- Code generation settings
+The project uses `sqlc.yaml` to configure:
+- Database engine (PostgreSQL)
+- Schema location (`sql/schema`)
+- Query location (`sql/queries`)
+- Output directory (`internal/database`)
 
-Make sure to configure SQLC properly before generating code.
+**Example Query:**
+```sql
+-- name: CreateUser :one
+INSERT INTO users (id, name, created_at, updated_at)
+VALUES ($1, $2, $3, $4)
+RETURNING *;
+```
 
-## Project Structure
+After running `sqlc generate`, this creates type-safe Go functions in `internal/database/users.sql.go`.
+
+## 📁 Project Structure
 
 ```
 .
-├── main.go                 # Application entry point
-├── go.mod                  # Go module dependencies
+├── main.go                    # Application entry point
+├── go.mod                     # Go module dependencies
+├── sqlc.yaml                  # SQLC configuration
 ├── internal/
-│   └── config/            # Configuration management
+│   ├── config/               # Configuration management
+│   │   └── config.go
+│   └── database/             # SQLC generated code
+│       ├── db.go
+│       ├── models.go
+│       └── users.sql.go
 └── sql/
-    └── schema/            # Goose migration files
+    ├── schema/               # Goose migration files
+    │   └── 001_users.sql
+    └── queries/              # SQLC query files
+        └── users.sql
 ```
 
-## Configuration
+## ⚙️ Configuration
 
-The application stores configuration in `~/.gatorconfig.json` with the following structure:
+The application stores configuration in `~/.gatorconfig.json`:
 
 ```json
 {
@@ -89,28 +134,106 @@ The application stores configuration in `~/.gatorconfig.json` with the following
 }
 ```
 
-## Usage
+The `db_url` should point to your PostgreSQL database connection string.
+
+## 💻 Usage
+
+### Commands
 
 ```bash
-# Login as a user
+# Register a new user
+gator register <username>
+
+# Login as an existing user
 gator login <username>
+
+# List all users (current user is marked)
+gator users
+
+# Reset database (delete all users)
+gator reset
 ```
 
-## Development
+### Examples
 
-### Prerequisites
+```bash
+# Register and automatically login
+gator register alice
 
-- Go 1.23.2 or later
-- PostgreSQL database
-- Goose CLI tool
-- SQLC CLI tool
+# Login as existing user
+gator login bob
 
-### Setup
+# List all users
+gator users
+# Output:
+# * alice (current)
+# * bob
+```
 
-1. Clone the repository
-2. Install dependencies: `go mod download`
-3. Configure your database URL in `~/.gatorconfig.json`
-4. Run migrations: `goose -dir sql/schema postgres "$DB_URL" up`
-5. Generate SQLC code: `sqlc generate`
-6. Build and run: `go build && ./boot.dev-blog-aggregator`
+## 🛠️ Development
 
+### Initial Setup
+
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd boot.dev-blog-aggregator
+   ```
+
+2. **Install dependencies**
+   ```bash
+   go mod download
+   ```
+
+3. **Configure database**
+   Create `~/.gatorconfig.json` with your PostgreSQL connection string:
+   ```json
+   {
+     "db_url": "postgres://user:password@localhost/dbname"
+   }
+   ```
+
+4. **Run migrations**
+   ```bash
+   goose -dir sql/schema postgres "$(jq -r .db_url ~/.gatorconfig.json)" up
+   ```
+
+5. **Generate SQLC code**
+   ```bash
+   sqlc generate
+   ```
+
+6. **Build and run**
+   ```bash
+   go build -o gator
+   ./gator register testuser
+   ```
+
+### Development Workflow
+
+1. **Add a new migration:**
+   ```bash
+   goose -dir sql/schema postgres "$DB_URL" create add_posts_table sql
+   ```
+
+2. **Write SQL queries** in `sql/queries/`
+
+3. **Generate code:**
+   ```bash
+   sqlc generate
+   ```
+
+4. **Use generated code** in your Go application
+
+### Dependencies
+
+- `github.com/lib/pq` - PostgreSQL driver
+- `github.com/google/uuid` - UUID generation
+- SQLC generated code in `internal/database/`
+
+## 📝 Notes
+
+- UUIDs are auto-generated using PostgreSQL's `gen_random_uuid()` function
+- User names must be unique (enforced by database constraint)
+- Timestamps are automatically managed with `CURRENT_TIMESTAMP` defaults
+- The current user is stored in the config file, not the database
