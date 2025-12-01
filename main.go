@@ -108,6 +108,25 @@ func handleReset(s *state, cmd command) error {
 	return nil
 }
 
+func handleUsers(s *state, cmd command) error {
+	users, err := s.database.GetUsers(context.Background())
+	if err != nil {
+		return fmt.Errorf("failed to get users: %v", err)
+	}
+
+	for _, user := range users {
+		outputName := user.Name
+		
+		if *s.config.CurrentUserName == user.Name {
+			outputName += " (current)"
+		}
+		
+		fmt.Printf("* %v\n", outputName)
+	}
+
+	return nil
+}
+
 func main() {
 	configFile, err := config.Read()
 	if err != nil {
@@ -136,6 +155,7 @@ func main() {
 	commands.register("login", handleLogin)
 	commands.register("register", handleRegister)
 	commands.register("reset", handleReset)
+	commands.register("users", handleUsers)
 
 	if len(os.Args) < 2 {
 		log.Fatalf("you did not provide any arguments. Usage of gator is: gator <command> <args>")
