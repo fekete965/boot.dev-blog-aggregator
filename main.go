@@ -3,8 +3,12 @@ package main
 import (
 	"context"
 	"database/sql"
+	"encoding/xml"
 	"fmt"
+	"html"
+	"io"
 	"log"
+	"net/http"
 	"os"
 	"time"
 
@@ -144,6 +148,38 @@ type RSSChannel struct {
 
 type RSSFeed struct {
 	Channel RSSChannel `xml:"channel"`
+}
+
+func fetchFeed(ctx context.Context, feedUrl string) (*RSSFeed, error) {
+	req, err := http.NewRequestWithContext(ctx, "GET", feedUrl, nil)
+	if err != nil {
+		return nil, fmt.Errorf("something went wrong creating the request: %v", err)
+	}
+
+	req.Header.Set("User-Agent", "gator/1.0")
+
+	client := http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("something went wrong fetching the feed: %v", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("something went wrong reading the response body: %v", err)
+	}
+	
+	if resp.StatusCode > 299 {
+		return nil, fmt.Errorf("response failed with status code: %v and body %v", resp.StatusCode, body)
+	}
+
+	var result RSSFeed = RSSFeed{}
+	if err := xml.Unmarshal(body, &result); err != nil {
+		return nil, fmt.Errorf("body marshalling failed: %v", err)
+	}
+
+	return &result, nil
 }
 
 func main() {
