@@ -131,6 +131,39 @@ func handleUsers(s *state, cmd command) error {
 	return nil
 }
 
+func handleAggregate(s *state, cmd command) error {
+	// For the future:
+	// if s.config.CurrentUserName == nil || *s.config.CurrentUserName == "" {
+	// 	return fmt.Errorf("you must be logged in to aggregate feeds. Usage: gator login <username> or gator register <username>")
+	// }
+	
+	// if len(cmd.args) == 0 {
+	// 	return fmt.Errorf("the aggregate command requires feed URL. Usage: gator agg <feed_url>")
+	// }
+
+	// feedUrl := cmd.args[0]
+	feedUrl := "https://www.wagslane.dev/index.xml"
+
+	rssFeed, err := fetchFeed(context.Background(), feedUrl)
+	if err != nil {
+		return fmt.Errorf("failed to aggregate feed: %v", err)
+	}
+
+	fmt.Printf("Feed successfully aggregated\n")
+	fmt.Printf("%-12s %v\n", "Title:", html.UnescapeString(rssFeed.Channel.Title))
+	fmt.Printf("%-12s %v\n", "Description:", html.UnescapeString(rssFeed.Channel.Description))
+	fmt.Printf("%-12s %v\n", "Link:", html.UnescapeString(rssFeed.Channel.Link))
+	
+	fmt.Printf("Items \n")
+	for i, item := range rssFeed.Channel.Item {
+		fmt.Printf(" - %v. %-12s %v\n", i + 1, "Title:", html.UnescapeString(item.Title))
+		fmt.Printf(" -     %-12s %v\n", "Description:", html.UnescapeString(item.Description))
+		fmt.Printf(" -     %-12s %v\n", "Link:", html.UnescapeString(item.Link))
+		fmt.Printf(" -     %-12s %v\n", "PubDate:", html.UnescapeString(item.PubDate))
+	}
+
+	return nil
+}
 
 type RSSItem struct {
 	Title       string `xml:"title"`
@@ -211,6 +244,7 @@ func main() {
 	commands.register("register", handleRegister)
 	commands.register("reset", handleReset)
 	commands.register("users", handleUsers)
+	commands.register("agg", handleAggregate)
 
 	if len(os.Args) < 2 {
 		log.Fatalf("you did not provide any arguments. Usage of gator is: gator <command> <args>")
