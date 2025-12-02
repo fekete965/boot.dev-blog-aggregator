@@ -72,7 +72,7 @@ func handleLogin(s *state, cmd command) error {
 
 func handleRegister(s *state, cmd command) error {
 	if len(cmd.args) == 0 {
-		return fmt.Errorf("the register command required a username. Usage: gator register <username>")	
+		return fmt.Errorf("the register command requires a username. Usage: gator register <username>")	
 	}
 
 	username := cmd.args[0]
