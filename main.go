@@ -247,6 +247,26 @@ func handleAddFeed(s *state, cmd command) error {
 	return nil
 }
 
+func handleFeeds(s *state, cmd command) error {
+
+	feeds, err := s.database.GetFeeds(context.Background())
+	if err != nil {
+		return fmt.Errorf("failed to get feeds: %v", err)
+	}
+
+	fmt.Printf("Current feeds\n")
+	fmt.Printf("--------------------------------\n")
+	for _, feedData := range feeds {
+		fmt.Printf("- Feed Id:   %v\n", feedData.FeedID)
+		fmt.Printf("- User Name: %v\n", feedData.UserName)
+		fmt.Printf("- Feed Name: %v\n", feedData.FeedName)
+		fmt.Printf("- Feed URL:  %v\n", feedData.FeedUrl)
+		fmt.Printf("--------------------------------\n")
+	}
+
+	return nil
+}
+
 func main() {
 	configFile, err := config.Read()
 	if err != nil {
@@ -278,6 +298,7 @@ func main() {
 	commands.register("users", handleUsers)
 	commands.register("agg", handleAggregate)
 	commands.register("addfeed", handleAddFeed)
+	commands.register("feeds", handleFeeds)
 
 	if len(os.Args) < 2 {
 		log.Fatalf("you did not provide any arguments. Usage of gator is: gator <command> <args>")
