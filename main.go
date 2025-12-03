@@ -215,6 +215,38 @@ func fetchFeed(ctx context.Context, feedUrl string) (*RSSFeed, error) {
 	return &result, nil
 }
 
+func handleAddFeed(s *state, cmd command) error {
+	if len(cmd.args) < 2 {
+		return fmt.Errorf("the addfeed command requires a name and feed URL. Usage: gator addfeed <feed_name> <feed_url>")
+	}
+
+	feedName := cmd.args[0]
+	feedUrl := cmd.args[1]
+	
+	currentUser, err := s.database.FindUserByeName(context.Background(), *s.config.CurrentUserName)
+	if err != nil {
+		return fmt.Errorf("failed to find current user: %v", err)
+	}
+
+	createdFeed, err := s.database.CreateFeed(context.Background(), database.CreateFeedParams{
+		ID: uuid.New(),
+		UserID: currentUser.ID,
+		Name: feedName,
+		Url: feedUrl,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create feed: %v", err)
+	}
+
+	fmt.Printf("Feed successfully added\n")
+	fmt.Printf("- Id: %v\n", createdFeed.ID)
+	fmt.Printf("- User ID: %v\n", createdFeed.UserID)
+	fmt.Printf("- Name: %v\n", createdFeed.Name)
+	fmt.Printf("- URL: %v\n", createdFeed.Url)
+
+	return nil
+}
+
 func main() {
 	configFile, err := config.Read()
 	if err != nil {
@@ -245,6 +277,7 @@ func main() {
 	commands.register("reset", handleReset)
 	commands.register("users", handleUsers)
 	commands.register("agg", handleAggregate)
+	commands.register("addfeed", handleAddFeed)
 
 	if len(os.Args) < 2 {
 		log.Fatalf("you did not provide any arguments. Usage of gator is: gator <command> <args>")
