@@ -244,6 +244,13 @@ func handleAddFeed(s *state, cmd command) error {
 	fmt.Printf("- Name: %v\n", createdFeed.Name)
 	fmt.Printf("- URL: %v\n", createdFeed.Url)
 
+	newFeedFollow, err := createFeedFollowForUser(s, createdFeed.ID, *s.config.CurrentUserName)
+	if err != nil {
+		return fmt.Errorf("failed to follow the feed: %v", err)
+	}
+
+	fmt.Printf("Successfully followed the feed: %v\n", newFeedFollow.FeedName)
+
 	return nil
 }
 
