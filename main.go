@@ -267,6 +267,25 @@ func handleFeeds(s *state, cmd command) error {
 	return nil
 }
 
+func createFeedFollowForUser(s *state, feedID uuid.UUID, userName string) (*database.CreateFeedFollowRow, error) {
+	currentUser, err := s.database.FindUserByeName(context.Background(), userName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to find current user: %v", err)
+	}
+
+	newFeedFollow, err := s.database.CreateFeedFollow(context.Background(), database.CreateFeedFollowParams{
+		ID: uuid.New(),
+		UserID: currentUser.ID,
+		FeedID: feedID,
+		CreatedAt: time.Now(),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to create feed follow: %v", err)
+	}
+
+	return &newFeedFollow, nil
+}
+
 func main() {
 	configFile, err := config.Read()
 	if err != nil {
