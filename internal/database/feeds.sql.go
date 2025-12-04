@@ -41,12 +41,12 @@ func (q *Queries) CreateFeed(ctx context.Context, arg CreateFeedParams) (Feed, e
 	return i, err
 }
 
-const getFeedByUrl = `-- name: GetFeedByUrl :one
+const findFeedByUrl = `-- name: FindFeedByUrl :one
 SELECT id, user_id, url, name FROM feeds WHERE url = $1 LIMIT 1
 `
 
-func (q *Queries) GetFeedByUrl(ctx context.Context, url string) (Feed, error) {
-	row := q.db.QueryRowContext(ctx, getFeedByUrl, url)
+func (q *Queries) FindFeedByUrl(ctx context.Context, url string) (Feed, error) {
+	row := q.db.QueryRowContext(ctx, findFeedByUrl, url)
 	var i Feed
 	err := row.Scan(
 		&i.ID,

@@ -8,5 +8,5 @@ SELECT feeds.id AS feed_id, users.name as user_name, feeds.name as feed_name, fe
 INNER JOIN users on feeds.user_id = users.id
 ORDER BY feeds.name ASC;
 
--- name: GetFeedByUrl :one
+-- name: FindFeedByUrl :one
 SELECT * FROM feeds WHERE url = $1 LIMIT 1;

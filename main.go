@@ -285,7 +285,7 @@ func handleFollow(s *state, cmd command, user database.User) error {
 
 	feedUrl := cmd.args[0]
 
-	feed, err := s.database.GetFeedByUrl(context.Background(), feedUrl)
+	feed, err := s.database.FindFeedByUrl(context.Background(), feedUrl)
 	if err != nil {
 		return fmt.Errorf("failed to get feed by URL: %v", err)
 	}
