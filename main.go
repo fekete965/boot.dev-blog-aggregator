@@ -234,7 +234,7 @@ func handleAddFeed(s *state, cmd command, user database.User) error {
 	fmt.Printf("- Name: %v\n", createdFeed.Name)
 	fmt.Printf("- URL: %v\n", createdFeed.Url)
 
-	newFeedFollow, err := createFeedFollowForUser(s, createdFeed.ID, *s.config.CurrentUserName)
+	newFeedFollow, err := createFeedFollowForUser(s, createdFeed.ID, user.ID)
 	if err != nil {
 		return fmt.Errorf("failed to follow the feed: %v", err)
 	}
@@ -245,7 +245,6 @@ func handleAddFeed(s *state, cmd command, user database.User) error {
 }
 
 func handleFeeds(s *state, cmd command) error {
-
 	feeds, err := s.database.GetFeeds(context.Background())
 	if err != nil {
 		return fmt.Errorf("failed to get feeds: %v", err)
@@ -264,15 +263,11 @@ func handleFeeds(s *state, cmd command) error {
 	return nil
 }
 
-func createFeedFollowForUser(s *state, feedID uuid.UUID, userName string) (*database.CreateFeedFollowRow, error) {
-	currentUser, err := s.database.FindUserByeName(context.Background(), userName)
-	if err != nil {
-		return nil, fmt.Errorf("failed to find current user: %v", err)
-	}
+func createFeedFollowForUser(s *state, feedID uuid.UUID, userID uuid.UUID) (*database.CreateFeedFollowRow, error) {
 
 	newFeedFollow, err := s.database.CreateFeedFollow(context.Background(), database.CreateFeedFollowParams{
 		ID: uuid.New(),
-		UserID: currentUser.ID,
+		UserID: userID,
 		FeedID: feedID,
 		CreatedAt: time.Now(),
 	})
@@ -295,7 +290,7 @@ func handleFollow(s *state, cmd command, user database.User) error {
 		return fmt.Errorf("failed to get feed by URL: %v", err)
 	}
 
-	newFeedFollow, err := createFeedFollowForUser(s, feed.ID, *s.config.CurrentUserName)
+	newFeedFollow, err := createFeedFollowForUser(s, feed.ID, user.ID)
 	if err != nil {
 		return fmt.Errorf("failed to follow the feed: %v", err)
 	}
