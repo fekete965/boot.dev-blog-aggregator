@@ -340,6 +340,23 @@ func handleFollowing(s *state, cmd command) error {
 	return nil
 }
 
+func middlewareLoggedIn(handler func(s *state, cmd command, user database.User) error) func(s *state, cmd command) error {
+	var responseFn = func(s *state, cmd command) error {
+			if s.config.CurrentUserName == nil || *s.config.CurrentUserName == "" {
+				return fmt.Errorf("you must be logged in to use this feature. Use: gator login <username> or gator register <username>")
+			}
+			
+			currentUser, err := s.database.FindUserByeName(context.Background(), *s.config.CurrentUserName)
+			if err != nil {
+				return fmt.Errorf("failed to find current user: %v", err)
+			}
+
+			return handler(s, cmd, currentUser)
+	}
+
+	return responseFn
+}
+
 func main() {
 	configFile, err := config.Read()
 	if err != nil {
