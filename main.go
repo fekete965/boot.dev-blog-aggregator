@@ -305,13 +305,8 @@ func handleFollow(s *state, cmd command, user database.User) error {
 	return nil
 }
 
-func handleFollowing(s *state, cmd command) error {
-	currentUser, err := s.database.FindUserByeName(context.Background(), *s.config.CurrentUserName)
-	if err != nil {
-		return fmt.Errorf("failed to find current user: %v", err)
-	}
-
-	feedFollows, err := s.database.GetFeedFollowsForUser(context.Background(), currentUser.ID)
+func handleFollowing(s *state, cmd command, user database.User) error {
+	feedFollows, err := s.database.GetFeedFollowsForUser(context.Background(), user.ID)
 	if err != nil {
 		return fmt.Errorf("failed to get feed follows for user: %v", err)
 	}
@@ -379,8 +374,8 @@ func main() {
 	commands.register("agg", handleAggregate)
 	commands.register("addfeed", middlewareLoggedIn(handleAddFeed))
 	commands.register("feeds", handleFeeds)
-	commands.register("following", handleFollowing)
 	commands.register("follow", middlewareLoggedIn(handleFollow))
+	commands.register("following", middlewareLoggedIn(handleFollowing))
 	
 	if len(os.Args) < 2 {
 		log.Fatalf("you did not provide any arguments. Usage of gator is: gator <command> <args>")
