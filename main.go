@@ -132,11 +132,6 @@ func handleUsers(s *state, cmd command) error {
 }
 
 func handleAggregate(s *state, cmd command) error {
-	// For the future:
-	// if s.config.CurrentUserName == nil || *s.config.CurrentUserName == "" {
-	// 	return fmt.Errorf("you must be logged in to aggregate feeds. Usage: gator login <username> or gator register <username>")
-	// }
-	
 	// if len(cmd.args) == 0 {
 	// 	return fmt.Errorf("the aggregate command requires feed URL. Usage: gator agg <feed_url>")
 	// }
@@ -215,22 +210,17 @@ func fetchFeed(ctx context.Context, feedUrl string) (*RSSFeed, error) {
 	return &result, nil
 }
 
-func handleAddFeed(s *state, cmd command) error {
+func handleAddFeed(s *state, cmd command, user database.User) error {
 	if len(cmd.args) < 2 {
 		return fmt.Errorf("the addfeed command requires a name and feed URL. Usage: gator addfeed <feed_name> <feed_url>")
 	}
 
 	feedName := cmd.args[0]
 	feedUrl := cmd.args[1]
-	
-	currentUser, err := s.database.FindUserByeName(context.Background(), *s.config.CurrentUserName)
-	if err != nil {
-		return fmt.Errorf("failed to find current user: %v", err)
-	}
 
 	createdFeed, err := s.database.CreateFeed(context.Background(), database.CreateFeedParams{
 		ID: uuid.New(),
-		UserID: currentUser.ID,
+		UserID: user.ID,
 		Name: feedName,
 		Url: feedUrl,
 	})
@@ -387,7 +377,7 @@ func main() {
 	commands.register("reset", handleReset)
 	commands.register("users", handleUsers)
 	commands.register("agg", handleAggregate)
-	commands.register("addfeed", handleAddFeed)
+	commands.register("addfeed", middlewareLoggedIn(handleAddFeed))
 	commands.register("feeds", handleFeeds)
 	commands.register("follow", handleFollow)
 	commands.register("following", handleFollowing)
