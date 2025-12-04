@@ -283,7 +283,7 @@ func createFeedFollowForUser(s *state, feedID uuid.UUID, userName string) (*data
 	return &newFeedFollow, nil
 }
 
-func handleFollow(s *state, cmd command) error {
+func handleFollow(s *state, cmd command, user database.User) error {
 	if len(cmd.args) == 0 {
 		return fmt.Errorf("the follow requires a feed URL. Usage: gator follow <feed_url>")
 	}
@@ -379,8 +379,8 @@ func main() {
 	commands.register("agg", handleAggregate)
 	commands.register("addfeed", middlewareLoggedIn(handleAddFeed))
 	commands.register("feeds", handleFeeds)
-	commands.register("follow", handleFollow)
 	commands.register("following", handleFollowing)
+	commands.register("follow", middlewareLoggedIn(handleFollow))
 	
 	if len(os.Args) < 2 {
 		log.Fatalf("you did not provide any arguments. Usage of gator is: gator <command> <args>")
