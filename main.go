@@ -337,6 +337,29 @@ func middlewareLoggedIn(handler func(s *state, cmd command, user database.User) 
 	return responseFn
 }
 
+func handleUnfollow(s *state, cmd command, user database.User) error {
+	if len(cmd.args) == 0 {
+		return fmt.Errorf("the unfollow command required a feed URL. Usage gator unfollow <feed_url>")
+	}
+
+	feedUrl := cmd.args[0]
+	feed, err := s.database.FindFeedByUrl(context.Background(), feedUrl)
+	if err != nil {
+		return fmt.Errorf("failed to find feed by URL: %v", err)
+	}
+	err = s.database.DeleteFeedFollow(context.Background(), database.DeleteFeedFollowParams{
+		UserID: user.ID,
+		FeedID: feed.ID,
+	})
+	if err != nil {
+		return fmt.Errorf("failed to unfollow the feed: %v", err)
+	}
+
+	fmt.Printf("Successfully unfollowed the feed: %v\n", feed.Name)
+
+	return nil
+}
+
 func main() {
 	configFile, err := config.Read()
 	if err != nil {
@@ -371,6 +394,7 @@ func main() {
 	commands.register("feeds", handleFeeds)
 	commands.register("follow", middlewareLoggedIn(handleFollow))
 	commands.register("following", middlewareLoggedIn(handleFollowing))
+	commands.register("unfollow", middlewareLoggedIn(handleUnfollow))
 	
 	if len(os.Args) < 2 {
 		log.Fatalf("you did not provide any arguments. Usage of gator is: gator <command> <args>")
