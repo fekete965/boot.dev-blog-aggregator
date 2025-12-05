@@ -132,32 +132,26 @@ func handleUsers(s *state, cmd command) error {
 }
 
 func handleAggregate(s *state, cmd command) error {
-	// if len(cmd.args) == 0 {
-	// 	return fmt.Errorf("the aggregate command requires feed URL. Usage: gator agg <feed_url>")
-	// }
+	if len(cmd.args) == 0 {
+		return fmt.Errorf("the aggregate command requires time between requests.\nValid time units are \"ns\", \"us\" (or \"µs\"), \"ms\", \"s\", \"m\", \"h\".\nUsage: gator agg <time_between_requests>")
+	}
 
-	// feedUrl := cmd.args[0]
-	feedUrl := "https://www.wagslane.dev/index.xml"
-
-	rssFeed, err := fetchFeed(context.Background(), feedUrl)
+	timeBetweenReqs, err := time.ParseDuration(cmd.args[0])
 	if err != nil {
-		return fmt.Errorf("failed to aggregate feed: %v", err)
+		return fmt.Errorf("failed to parse time between requests: %v", err)
 	}
 
-	fmt.Printf("Feed successfully aggregated\n")
-	fmt.Printf("%-12s %v\n", "Title:", html.UnescapeString(rssFeed.Channel.Title))
-	fmt.Printf("%-12s %v\n", "Description:", html.UnescapeString(rssFeed.Channel.Description))
-	fmt.Printf("%-12s %v\n", "Link:", html.UnescapeString(rssFeed.Channel.Link))
-	
-	fmt.Printf("Items \n")
-	for i, item := range rssFeed.Channel.Item {
-		fmt.Printf(" - %v. %-12s %v\n", i + 1, "Title:", html.UnescapeString(item.Title))
-		fmt.Printf(" -     %-12s %v\n", "Description:", html.UnescapeString(item.Description))
-		fmt.Printf(" -     %-12s %v\n", "Link:", html.UnescapeString(item.Link))
-		fmt.Printf(" -     %-12s %v\n", "PubDate:", html.UnescapeString(item.PubDate))
-	}
+	fmt.Printf("Collecting feeds every %v\n", timeBetweenReqs)
 
-	return nil
+	ticker := time.NewTicker(timeBetweenReqs)
+
+	for ; ; <- ticker.C {
+		err := scrapeFeeds(s)
+
+		if err != nil {
+			return fmt.Errorf("error scraping feeds: %v", err)
+		}
+	}
 }
 
 type RSSItem struct {
