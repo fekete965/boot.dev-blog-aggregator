@@ -10,3 +10,13 @@ ORDER BY feeds.name ASC;
 
 -- name: FindFeedByUrl :one
 SELECT * FROM feeds WHERE url = $1 LIMIT 1;
+
+-- name: MarkFeedFetched :exec
+UPDATE feeds SET last_fetched_at = $1 WHERE id = $2;
+
+-- name: GetNextFeedToFetch :one
+SELECT * 
+FROM feeds 
+WHERE last_fetched_at IS NULL
+ORDER BY created_at ASC, last_fetched_at IS NULL DESC
+LIMIT 1;
