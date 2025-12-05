@@ -360,6 +360,44 @@ func handleUnfollow(s *state, cmd command, user database.User) error {
 	return nil
 }
 
+func scrapeFeeds(s *state) error {
+
+	nextFeed, err := s.database.GetNextFeedToFetch(context.Background())
+	if err != nil {
+		return fmt.Errorf("failed to get next feed: %v", err)
+	}
+	
+	err = s.database.MarkFeedFetched(context.Background(), database.MarkFeedFetchedParams{
+		ID: nextFeed.ID,
+		LastFetchedAt: sql.NullTime{
+			Time: time.Now(),
+			Valid: true,
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("failed to mark feed fetched: %v", err)
+	}
+
+	rssFeed, err := fetchFeed(context.Background(), nextFeed.Url)
+	if err != nil {
+		return fmt.Errorf("failed to fetch feed: %v", err)
+	}
+
+	fmt.Printf("Feed successfully aggregated\n")
+	fmt.Printf("%-12s %v\n", "Title:", html.UnescapeString(rssFeed.Channel.Title))
+	fmt.Printf("%-12s %v\n", "Description:", html.UnescapeString(rssFeed.Channel.Description))
+	fmt.Printf("%-12s %v\n", "Link:", html.UnescapeString(rssFeed.Channel.Link))
+	
+	fmt.Printf("Items \n")
+	for i, item := range rssFeed.Channel.Item {
+		fmt.Printf(" - %v. %-12s %v\n", i + 1, "Title:", html.UnescapeString(item.Title))
+		fmt.Printf(" -     %-12s %v\n", "Description:", html.UnescapeString(item.Description))
+		fmt.Printf(" -     %-12s %v\n", "Link:", html.UnescapeString(item.Link))
+		fmt.Printf(" -     %-12s %v\n", "PubDate:", html.UnescapeString(item.PubDate))
+	}
+	return nil
+}
+
 func main() {
 	configFile, err := config.Read()
 	if err != nil {
