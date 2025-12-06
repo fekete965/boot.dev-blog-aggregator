@@ -1,144 +1,134 @@
-# Boot.dev Blog Aggregator
+# 🐊 Gator - Blog Aggregator CLI
 
-A modern Go-based blog aggregator CLI application built with type-safe database queries.
+> A modern, type-safe RSS feed aggregator built with Go. Collect, organize, and browse blog posts from your favorite RSS feeds all from the command line.
 
-## 🚀 Features
+[![Go Version](https://img.shields.io/badge/go-1.23.2-blue.svg)](https://golang.org/)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-- **Type-safe database queries** using SQLC
-- **Database migrations** managed with Goose
-- **User management** with registration, login, and listing
-- **CLI-first** design for easy automation
+## ✨ Features
+
+- 🔐 **User Management** - Register, login, and manage multiple users
+- 📰 **RSS Feed Aggregation** - Add and follow RSS feeds from any source
+- 🤖 **Automatic Scraping** - Periodically fetch and store new posts
+- 📖 **Post Browsing** - Browse posts from your followed feeds in a beautiful CLI interface
+- 🗄️ **Type-Safe Database** - Built with SQLC for compile-time query safety
+- 🔄 **Database Migrations** - Managed with Goose for version-controlled schema changes
+- ⚡ **Statically Compiled** - Single binary, no runtime dependencies
 
 ## 📋 Prerequisites
 
-- **Go** 1.23.2 or later
-- **PostgreSQL** 13+ (for `gen_random_uuid()` support)
-- **Goose** CLI tool for migrations
-- **SQLC** CLI tool for code generation
+Before you begin, ensure you have the following installed:
 
-### Installing Tools
+- **Go** 1.23.2 or later ([Download](https://golang.org/dl/))
+- **PostgreSQL** 13+ ([Download](https://www.postgresql.org/download/))
+  - Required for `gen_random_uuid()` support
 
-```bash
-# Install Goose
-go install github.com/pressly/goose/v3/cmd/goose@latest
-
-# Install SQLC
-go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest
-```
-
-## 🗄️ Database Management
-
-This project uses **Goose** for database migrations and **SQLC** for type-safe SQL code generation.
-
-### Goose Migrations
-
-**Goose** manages database schema migrations. All migration files are located in `sql/schema/`.
-
-#### Running Migrations
+### Verify Installation
 
 ```bash
-# Run all pending migrations
-goose -dir sql/schema postgres "$DB_URL" up
+# Check Go version
+go version
 
-# Rollback the last migration
-goose -dir sql/schema postgres "$DB_URL" down
-
-# Check migration status
-goose -dir sql/schema postgres "$DB_URL" status
-
-# Create a new migration
-goose -dir sql/schema postgres "$DB_URL" create migration_name sql
+# Check PostgreSQL version
+psql --version
 ```
 
-#### Migration File Structure
+## 🚀 Installation
 
-Migration files follow the pattern `XXX_description.sql` (e.g., `001_users.sql`). Each file includes:
+### Install the Gator CLI
 
-- `-- +goose up` - Migration SQL
-- `-- +goose down` - Rollback SQL
+Install `gator` globally using Go's `install` command:
 
-**Example:**
-```sql
--- +goose up
-CREATE TABLE users (
-  id UUID PRIMARY KEY NOT NULL DEFAULT gen_random_uuid(),
-  name VARCHAR(255) NOT NULL UNIQUE,
-  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
-);
-
--- +goose down
-DROP TABLE users;
+```bash
+go install github.com/fekete965/boot.dev-blog-aggregator@latest
 ```
 
-### SQLC Code Generation
+This will compile and install the `gator` binary to your `$GOPATH/bin` or `$HOME/go/bin` directory. Make sure this directory is in your `PATH`.
 
-**SQLC** generates type-safe Go code from SQL queries, providing compile-time safety and eliminating manual struct mapping.
+**Note:** Go programs are statically compiled binaries. After installation, you can run `gator` from anywhere without needing the Go toolchain.
 
-#### Workflow
+### Verify Installation
 
-1. Write SQL queries in `sql/queries/` directory
-2. Run SQLC to generate Go code:
-   ```bash
-   sqlc generate
-   ```
-3. Generated code appears in `internal/database/`
-
-#### SQLC Configuration
-
-The project uses `sqlc.yaml` to configure:
-- Database engine (PostgreSQL)
-- Schema location (`sql/schema`)
-- Query location (`sql/queries`)
-- Output directory (`internal/database`)
-
-**Example Query:**
-```sql
--- name: CreateUser :one
-INSERT INTO users (id, name, created_at, updated_at)
-VALUES ($1, $2, $3, $4)
-RETURNING *;
-```
-
-After running `sqlc generate`, this creates type-safe Go functions in `internal/database/users.sql.go`.
-
-## 📁 Project Structure
-
-```
-.
-├── main.go                    # Application entry point
-├── go.mod                     # Go module dependencies
-├── sqlc.yaml                  # SQLC configuration
-├── internal/
-│   ├── config/               # Configuration management
-│   │   └── config.go
-│   └── database/             # SQLC generated code
-│       ├── db.go
-│       ├── models.go
-│       └── users.sql.go
-└── sql/
-    ├── schema/               # Goose migration files
-    │   └── 001_users.sql
-    └── queries/              # SQLC query files
-        └── users.sql
+```bash
+gator --help
+# or simply
+gator
 ```
 
 ## ⚙️ Configuration
 
-The application stores configuration in `~/.gatorconfig.json`:
+Gator stores its configuration in `~/.gatorconfig.json` in your home directory.
+
+### Initial Setup
+
+1. **Create the configuration file:**
+
+```bash
+cat > ~/.gatorconfig.json << EOF
+{
+  "db_url": "postgres://username:password@localhost/dbname?sslmode=disable"
+}
+EOF
+```
+
+2. **Set up your PostgreSQL database:**
+
+```bash
+# Create a database (if you haven't already)
+createdb blog_aggregator
+
+# Or using psql
+psql -U postgres -c "CREATE DATABASE blog_aggregator;"
+```
+
+3. **Run database migrations:**
+
+You'll need to install [Goose](https://github.com/pressly/goose) for migrations:
+
+```bash
+go install github.com/pressly/goose/v3/cmd/goose@latest
+```
+
+Then run migrations:
+
+```bash
+DB_URL=$(jq -r .db_url ~/.gatorconfig.json)
+goose -dir sql/schema postgres "$DB_URL" up
+```
+
+### Configuration File Format
 
 ```json
 {
-  "db_url": "postgres://user:password@localhost/dbname",
-  "current_user_name": "username"
+  "db_url": "postgres://user:password@localhost:5432/dbname?sslmode=disable",
+  "current_user_name": "alice"
 }
 ```
 
-The `db_url` should point to your PostgreSQL database connection string.
+- `db_url`: PostgreSQL connection string (required)
+- `current_user_name`: Currently logged-in user (set automatically)
 
 ## 💻 Usage
 
-### Commands
+### Quick Start
+
+```bash
+# 1. Register a new user (automatically logs you in)
+gator register alice
+
+# 2. Add an RSS feed
+gator addfeed "Boot.dev Blog" https://blog.boot.dev/index.xml
+
+# 3. Start aggregating feeds (runs continuously)
+gator agg 30s
+
+# 4. Browse your posts
+gator browse 10
+```
+
+### Available Commands
+
+#### User Management
 
 ```bash
 # Register a new user
@@ -154,76 +144,199 @@ gator users
 gator reset
 ```
 
-### Examples
+#### Feed Management
 
 ```bash
-# Register and automatically login
+# Add a new RSS feed (requires login)
+gator addfeed <feed_name> <feed_url>
+
+# List all feeds in the system
+gator feeds
+
+# Follow an existing feed (requires login)
+gator follow <feed_url>
+
+# List feeds you're following (requires login)
+gator following
+
+# Unfollow a feed (requires login)
+gator unfollow <feed_url>
+```
+
+#### Post Aggregation & Browsing
+
+```bash
+# Aggregate feeds continuously (requires feeds to exist)
+# Time format: "30s", "5m", "1h", etc.
+gator agg <time_between_requests>
+
+# Browse posts from your followed feeds (requires login)
+# Default limit is 2 posts
+gator browse [limit]
+```
+
+### Command Examples
+
+```bash
+# Register and login
 gator register alice
+# Output: New user registered: alice
 
-# Login as existing user
-gator login bob
+# Add a feed
+gator addfeed "Go Blog" https://go.dev/blog/feed.atom
+# Output: Feed successfully added
+#         - Id: 550e8400-e29b-41d4-a716-446655440000
+#         - User ID: ...
+#         - Name: Go Blog
+#         - URL: https://go.dev/blog/feed.atom
+#         Successfully followed the feed: Go Blog
 
-# List all users
-gator users
-# Output:
-# * alice (current)
-# * bob
+# List your feeds
+gator following
+# Output: Current user is following 1 feed
+#         - Go Blog
+
+# Aggregate feeds every 30 seconds
+gator agg 30s
+# Output: Collecting feeds every 30s
+#         Post successfully created: Go 1.23 Release Notes
+#         Post successfully created: Working with Go Modules
+#         ...
+
+# Browse latest 5 posts
+gator browse 5
+# Output: ┌─────────────────────────────────────────────────────────────┐
+#         │ Title: Go 1.23 Release Notes                                │
+#         │ Published At: 15 August 2024 10:30                          │
+#         ├─────────────────────────────────────────────────────────────┤
+#         │ Description:                                                │
+#         │ Go 1.23 brings new features and improvements...             │
+#         ├─────────────────────────────────────────────────────────────┤
+#         │ URL: https://go.dev/blog/go1.23                             │
+#         └─────────────────────────────────────────────────────────────┘
 ```
 
 ## 🛠️ Development
 
-### Initial Setup
+### Project Structure
 
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd boot.dev-blog-aggregator
-   ```
+```
+.
+├── main.go                    # Application entry point & CLI handlers
+├── go.mod                     # Go module dependencies
+├── sqlc.yaml                  # SQLC configuration
+├── internal/
+│   ├── config/               # Configuration management
+│   │   └── config.go
+│   └── database/             # SQLC generated code
+│       ├── db.go
+│       ├── models.go
+│       ├── users.sql.go
+│       ├── feeds.sql.go
+│       ├── feed_follows.sql.go
+│       └── posts.sql.go
+└── sql/
+    ├── schema/               # Goose migration files
+    │   ├── 001_users.sql
+    │   ├── 002_feeds.sql
+    │   ├── 003_feed_follows.sql
+    │   ├── 004_feeds.sql
+    │   └── 005_posts.sql
+    └── queries/              # SQLC query files
+        ├── users.sql
+        ├── feeds.sql
+        ├── feed_follows.sql
+        └── posts.sql
+```
 
-2. **Install dependencies**
-   ```bash
-   go mod download
-   ```
+### Development Setup
 
-3. **Configure database**
-   Create `~/.gatorconfig.json` with your PostgreSQL connection string:
-   ```json
-   {
-     "db_url": "postgres://user:password@localhost/dbname"
-   }
-   ```
+1. **Clone the repository:**
 
-4. **Run migrations**
-   ```bash
-   goose -dir sql/schema postgres "$(jq -r .db_url ~/.gatorconfig.json)" up
-   ```
+```bash
+git clone https://github.com/your-username/boot.dev-blog-aggregator.git
+cd boot.dev-blog-aggregator
+```
 
-5. **Generate SQLC code**
-   ```bash
-   sqlc generate
-   ```
+2. **Install dependencies:**
 
-6. **Build and run**
-   ```bash
-   go build -o gator
-   ./gator register testuser
-   ```
+```bash
+go mod download
+```
+
+3. **Install development tools:**
+
+```bash
+# Install Goose for migrations
+go install github.com/pressly/goose/v3/cmd/goose@latest
+
+# Install SQLC for code generation
+go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest
+```
+
+4. **Set up configuration:**
+
+Create `~/.gatorconfig.json` with your database connection string.
+
+5. **Run migrations:**
+
+```bash
+DB_URL=$(jq -r .db_url ~/.gatorconfig.json)
+goose -dir sql/schema postgres "$DB_URL" up
+```
+
+6. **Generate SQLC code:**
+
+```bash
+sqlc generate
+```
+
+7. **Run during development:**
+
+```bash
+# Use go run for development
+go run . register testuser
+
+# Or build and run
+go build -o gator
+./gator register testuser
+```
 
 ### Development Workflow
 
-1. **Add a new migration:**
-   ```bash
-   goose -dir sql/schema postgres "$DB_URL" create add_posts_table sql
-   ```
+#### Adding a New Migration
 
-2. **Write SQL queries** in `sql/queries/`
+```bash
+DB_URL=$(jq -r .db_url ~/.gatorconfig.json)
+goose -dir sql/schema postgres "$DB_URL" create add_new_table sql
+```
 
-3. **Generate code:**
-   ```bash
-   sqlc generate
-   ```
+Edit the generated migration file in `sql/schema/`, then run:
 
-4. **Use generated code** in your Go application
+```bash
+goose -dir sql/schema postgres "$DB_URL" up
+```
+
+#### Adding a New Query
+
+1. Add SQL query to `sql/queries/<table>.sql`:
+
+```sql
+-- name: GetUserByID :one
+SELECT * FROM users WHERE id = $1 LIMIT 1;
+```
+
+2. Generate Go code:
+
+```bash
+sqlc generate
+```
+
+3. Use the generated function in your code:
+
+```go
+user, err := dbQueries.GetUserByID(ctx, userID)
+```
 
 ### Dependencies
 
@@ -231,9 +344,32 @@ gator users
 - `github.com/google/uuid` - UUID generation
 - SQLC generated code in `internal/database/`
 
-## 📝 Notes
+## 📚 Architecture
 
-- UUIDs are auto-generated using PostgreSQL's `gen_random_uuid()` function
-- User names must be unique (enforced by database constraint)
-- Timestamps are automatically managed with `CURRENT_TIMESTAMP` defaults
-- The current user is stored in the config file, not the database
+### Database Schema
+
+- **users** - User accounts
+- **feeds** - RSS feed definitions
+- **feed_follows** - User-feed relationships
+- **posts** - Aggregated blog posts
+
+### Key Design Decisions
+
+- **Type-Safe Queries**: SQLC generates Go code from SQL, providing compile-time safety
+- **Migration Management**: Goose handles schema versioning
+- **CLI-First**: Designed for automation and scripting
+- **Stateless Aggregation**: Feed scraping runs independently of user sessions
+
+## 📝 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## 🙏 Acknowledgments
+
+- Built as part of the [Boot.dev](https://boot.dev) curriculum
+- Uses [SQLC](https://sqlc.dev/) for type-safe SQL
+- Uses [Goose](https://github.com/pressly/goose) for migrations
+
+---
+
+**Note:** `go run .` is for development only. For production use, install `gator` using `go install` and run it as a statically compiled binary.
