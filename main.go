@@ -11,6 +11,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/fekete965/boot.dev-blog-aggregator/internal/config"
@@ -390,6 +391,24 @@ func handleUnfollow(s *state, cmd command, user database.User) error {
 	fmt.Printf("Successfully unfollowed the feed: %v\n", feed.Name)
 
 	return nil
+}
+
+func parsePubDate(dateStr string) (time.Time, error) {
+	formats := []string{
+			time.RFC1123Z,
+			time.RFC1123,
+			time.RFC822Z,
+			time.RFC822,
+			time.RFC3339,
+	}
+	
+	for _, format := range formats {
+			if t, err := time.Parse(format, dateStr); err == nil {
+					return t, nil
+			}
+	}
+	
+	return time.Time{}, fmt.Errorf("unable to parse date: %s", dateStr)
 }
 
 func scrapeFeeds(s *state) error {
