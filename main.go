@@ -587,6 +587,6 @@ func main() {
 	}
 
 	if err := commands.run(appState, newCommand); err != nil {
-		log.Fatalf("failed to run command: %v: ", err)
+		log.Fatalf("failed to run command: \"%v\"\n%v", newCommand.name, err)
 	}
 }
