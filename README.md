@@ -360,6 +360,42 @@ user, err := dbQueries.GetUserByID(ctx, userID)
 - **CLI-First**: Designed for automation and scripting
 - **Stateless Aggregation**: Feed scraping runs independently of user sessions
 
+## 🔮 Future Features
+
+The following features are planned for future releases:
+
+- 🔍 **Enhanced Browse Command**
+  - Add sorting options (by date, title, feed, etc.)
+  - Add filtering options (by feed, date range, keywords)
+  - Add pagination support for browsing large post collections
+
+- ⚡ **Performance Improvements**
+  - Add concurrency to the `agg` command to fetch multiple feeds simultaneously
+  - Enable more frequent feed fetching without blocking
+
+- 🔎 **Search Functionality**
+  - Add a `search` command with fuzzy search capabilities
+  - Search across post titles, descriptions, and content
+
+- ⭐ **Post Interaction**
+  - Add bookmarking functionality to save posts for later
+  - Add liking/favoriting posts for personal organization
+
+- 🖥️ **Terminal User Interface (TUI)**
+  - Interactive terminal interface for browsing posts
+  - Select and view posts in a more readable format
+  - Option to open posts in a browser directly from the TUI
+
+- 🌐 **HTTP API**
+  - RESTful API for remote access
+  - Authentication and authorization system
+  - Enable integration with other applications and services
+
+- 🔄 **Service Management**
+  - Background service manager to keep `agg` running continuously
+  - Automatic restart on crashes
+  - Health monitoring and logging
+
 ## 📝 License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
