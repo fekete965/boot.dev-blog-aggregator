@@ -35,6 +35,7 @@ type commands struct {
 }
 
 var ErrUserNotFound = errors.New("user not found")
+var ErrUserAlreadyExists = errors.New("user already exists")
 func (c *commands) run(s *state, cmd command) error {
 	if fn, ok := c.handlers[cmd.name]; ok {
 		return fn(s, cmd)
@@ -89,6 +90,26 @@ func handleLogin(s *state, cmd command) error {
 	return nil
 }
 
+func registerUser(s *state, username string) (database.User, error) {
+	newUser, err := s.database.CreateUser(context.Background(), database.CreateUserParams{
+		ID: uuid.New(),
+		Name: username,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	})
+	if err != nil {
+		var pqErr *pq.Error
+
+		if errors.As(err, &pqErr) && pqErr.Code == "23505" {
+			return database.User{}, ErrUserAlreadyExists
+		}
+
+		return database.User{}, fmt.Errorf("failed to register user: %v", err)
+	}
+
+	return newUser, nil
+}
+
 func handleRegister(s *state, cmd command) error {
 	if len(cmd.args) == 0 {
 		return fmt.Errorf("the register command requires a username. Usage: gator register <username>")	
@@ -96,26 +117,20 @@ func handleRegister(s *state, cmd command) error {
 
 	username := cmd.args[0]
 
-	createdUser, err := s.database.CreateUser(context.Background(), database.CreateUserParams{
-		ID: uuid.New(),
-		Name: username,
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
-	})
-
+	createdUser, err := registerUser(s, username)
 	if err != nil {
-		log.Fatalf("failed to register user: %v", err)
+		if err == ErrUserAlreadyExists {
+			return fmt.Errorf("user already exists. Please use a different username")
+		}
+
+		return fmt.Errorf("failed to register user: %v", err)
 	}
 
 	if err := s.config.SetUser(createdUser.Name); err != nil {
 		return fmt.Errorf("an error occurred during registration: %v", err)
 	}
 
-	fmt.Printf("User has been registered: %v\n", username)
-	fmt.Printf("User ID: %v\n", createdUser.ID)
-	fmt.Printf("User Name: %v\n", createdUser.Name)
-	fmt.Printf("User Created At: %v\n", createdUser.CreatedAt)
-	fmt.Printf("User Updated At: %v\n", createdUser.UpdatedAt)
+	fmt.Printf("New user registered: %v\n", username)
 
 	return nil
 }
