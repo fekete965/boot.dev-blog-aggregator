@@ -493,6 +493,50 @@ func truncateString(str string, maxLength int) string {
 
 	return str[:maxLength - 3] + "..."
 }
+
+func handleBrowse(s *state, cmd command, user database.User) error {
+	postLimitArg := "2"
+	if len(cmd.args) > 0 {
+		postLimitArg = cmd.args[0]
+	}
+
+	postLimit, err := strconv.Atoi(postLimitArg)
+	if err != nil {
+		fmt.Printf("failed to convert post limit to int: %v\n", err)
+		postLimit = 2
+	}
+
+	userPosts, err := s.database.GetPostForUser(context.Background(), database.GetPostForUserParams{
+		UserID: user.ID,
+		Limit: int32(postLimit),
+	})
+	if err != nil {
+		return fmt.Errorf("failed to get posts for the user: %v", err)
+	}
+
+	if len(userPosts) == 0 {
+		fmt.Println("No posts found")
+		return nil
+	}
+
+	for _, post := range userPosts {
+		publishedAtStr := "N/A"
+		if post.PublishedAt.Valid {
+			publishedAtStr = post.PublishedAt.Time.Format("02 January 2006 15:04")
+		}
+
+		fmt.Println("┌─────────────────────────────────────────────────────────────┐")
+		fmt.Printf("│ Title: %-50s │\n", truncateString(post.Title, 50))
+		fmt.Printf("│ Published At: %-44s │\n", publishedAtStr)
+		fmt.Println("├─────────────────────────────────────────────────────────────┤")
+		fmt.Printf("│ Description: %-51s │\n", "")
+		fmt.Printf("│ %-59s │\n", truncateString(post.Description, 59))
+		fmt.Println("├─────────────────────────────────────────────────────────────┤")
+		fmt.Printf("│ URL: %-55s │\n", truncateString(post.Url, 55))
+		fmt.Println("└─────────────────────────────────────────────────────────────┘")
+		fmt.Println()
+	}
+	
 	return nil
 }
 
@@ -531,6 +575,7 @@ func main() {
 	commands.register("follow", middlewareLoggedIn(handleFollow))
 	commands.register("following", middlewareLoggedIn(handleFollowing))
 	commands.register("unfollow", middlewareLoggedIn(handleUnfollow))
+	commands.register("browse", middlewareLoggedIn(handleBrowse))
 	
 	if len(os.Args) < 2 {
 		log.Fatalf("you did not provide any arguments. Usage of gator is: gator <command> <args>")
