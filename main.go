@@ -36,6 +36,7 @@ type commands struct {
 
 var ErrUserNotFound = errors.New("user not found")
 var ErrUserAlreadyExists = errors.New("user already exists")
+var ErrNoNextFeedFound = errors.New("no next feed found")
 func (c *commands) run(s *state, cmd command) error {
 	if fn, ok := c.handlers[cmd.name]; ok {
 		return fn(s, cmd)
@@ -181,7 +182,10 @@ func handleAggregate(s *state, cmd command) error {
 
 	for ; ; <- ticker.C {
 		err := scrapeFeeds(s)
-
+		if errors.Is(err, ErrNoNextFeedFound) {
+			fmt.Println("No feeds to scrape")
+			return nil
+		}
 		if err != nil {
 			return fmt.Errorf("error scraping feeds: %v", err)
 		}
@@ -389,9 +393,12 @@ func handleUnfollow(s *state, cmd command, user database.User) error {
 }
 
 func scrapeFeeds(s *state) error {
-
 	nextFeed, err := s.database.GetNextFeedToFetch(context.Background())
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ErrNoNextFeedFound
+		}
+		
 		return fmt.Errorf("failed to get next feed: %v", err)
 	}
 	
