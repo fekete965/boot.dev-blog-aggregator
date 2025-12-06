@@ -38,6 +38,8 @@ type commands struct {
 var ErrUserNotFound = errors.New("user not found")
 var ErrUserAlreadyExists = errors.New("user already exists")
 var ErrNoNextFeedFound = errors.New("no next feed found")
+var ErrPostExists = errors.New("post already exists")
+
 func (c *commands) run(s *state, cmd command) error {
 	if fn, ok := c.handlers[cmd.name]; ok {
 		return fn(s, cmd)
@@ -448,7 +450,31 @@ func scrapeFeeds(s *state) error {
 		fmt.Printf(" -     %-12s %v\n", "Description:", html.UnescapeString(item.Description))
 		fmt.Printf(" -     %-12s %v\n", "Link:", html.UnescapeString(item.Link))
 		fmt.Printf(" -     %-12s %v\n", "PubDate:", html.UnescapeString(item.PubDate))
+
+func createPost(s *state, data database.CreatePostParams) error {
+	newPost, err := s.database.CreatePost(context.Background(), data)
+	if err != nil {
+		var pqErr *pq.Error
+
+		if errors.As(err, &pqErr) && pqErr.Code == "23505" {
+			return ErrPostExists
+		}
+
+		return fmt.Errorf("failed to create post: %v", err)
 	}
+
+	fmt.Printf("Post successfully created: %v\n", newPost.Title)
+
+	return nil
+}
+
+func truncateString(str string, maxLength int) string {
+	if len(str) <= maxLength {
+		return str
+	}
+
+	return str[:maxLength - 3] + "..."
+}
 	return nil
 }
 
