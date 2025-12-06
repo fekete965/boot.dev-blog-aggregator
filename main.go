@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/xml"
+	"errors"
 	"fmt"
 	"html"
 	"io"
@@ -16,7 +17,7 @@ import (
 	"github.com/fekete965/boot.dev-blog-aggregator/internal/database"
 	"github.com/google/uuid"
 
-	_ "github.com/lib/pq"
+	"github.com/lib/pq"
 )
 
 type state struct {
@@ -33,6 +34,7 @@ type commands struct {
 	handlers map[string]func(s *state, cmd command) error
 }
 
+var ErrUserNotFound = errors.New("user not found")
 func (c *commands) run(s *state, cmd command) error {
 	if fn, ok := c.handlers[cmd.name]; ok {
 		return fn(s, cmd)
@@ -50,6 +52,19 @@ func (c *commands) register(name string, fn func(s *state, cmd command) error) e
 	return nil
 }
 
+func loginUser(s *state, username string) (database.User, error) {
+	user, err := s.database.FindUserByeName(context.Background(), username)
+	if err != nil {
+		if (errors.Is(err, sql.ErrNoRows)) {
+			return database.User{}, ErrUserNotFound
+		}
+
+		return database.User{}, fmt.Errorf("failed to login: %v", err)
+	}
+
+	return user, nil
+}
+
 func handleLogin(s *state, cmd command) error {
 	if len(cmd.args) == 0 {
 		return fmt.Errorf("the login command requires a username. Usage: gator login <username>")
@@ -57,9 +72,13 @@ func handleLogin(s *state, cmd command) error {
 
 	username := cmd.args[0]
 
-	existingUser, err := s.database.FindUserByeName(context.Background(), username)
+	existingUser, err := loginUser(s, username)
 	if err != nil {
-		log.Fatalf("cannot find user: %v", err)
+		if err == ErrUserNotFound {
+			return fmt.Errorf("user not found. Please double check the username and try again")
+		}
+
+		return fmt.Errorf("failed to login: %v", err)
 	}
 
 	if err := s.config.SetUser(existingUser.Name); err != nil {
